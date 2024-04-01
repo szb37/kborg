@@ -2,29 +2,43 @@ import src.folders as folders
 import shutil
 import os
 
+class Controllers:
 
-def move_endeavors():
+    def move_projects():
 
-    for filepath in Helpers.find_md_files(folders.core_dir):
-        with open(filepath, 'r', encoding='utf-8') as file:
+        for filepath in Helpers.find_md_files(folders.dir_core):
 
-            note = file.read()
-            if (Helpers.is_endeavor(note) is False):
+            if 'Template' in filepath:
                 continue
 
-            is_active = Helpers.is_active(note)
-            is_inactive = Helpers.is_inactive(note)
-            status = Helpers.assign_note(is_active, is_inactive)
-            assert status in ['active', 'inactive', 'undecided']
+            with open(filepath, 'r', encoding='utf-8') as file:
 
-        # Move file
-        if status=='active':
-            Helpers.move_file(filepath, folders.active_dir)
-        elif status=='inactive':
-            Helpers.move_file(filepath, folders.inactive_dir)
-        elif status =='undecided':
-            Helpers.move_file(filepath, folders.endeavor_dir)
-            print(f'Undecided endeavor: {os.path.basename(filepath)}')
+                note = file.read()
+                if (Helpers.is_project(note) is False):
+                    continue
+
+                is_active = Helpers.is_active(note)
+                is_dormant = Helpers.is_dormant(note)
+                status = Helpers.assign_status(is_active, is_dormant)
+                assert status in ['active', 'dormant', 'undecided']
+
+                is_life = Helpers.is_life(note)
+                is_work = Helpers.is_work(note)
+                domain = Helpers.assign_domain(is_life, is_work)
+                assert domain in ['life', 'work', 'undecided']
+
+            ### Move notes
+            if (domain=='life') and (status=='active'):
+                Helpers.move_file(filepath, folders.dir_life_active)
+            elif (domain=='life') and (status=='dormant'):
+                Helpers.move_file(filepath, folders.dir_life_dormant)
+            elif (domain=='work') and (status=='active'):
+                Helpers.move_file(filepath, folders.dir_work_active)
+            elif (domain=='work') and (status=='dormant'):
+                Helpers.move_file(filepath, folders.dir_work_dormant)
+            else:
+                Helpers.move_file(filepath, folders.dir_project)
+                print(f'Undecided project: {os.path.basename(filepath)}; domain:{domain}, status:{status}')
 
 
 class Helpers():
@@ -40,33 +54,53 @@ class Helpers():
         return md_files
 
     @staticmethod
-    def is_endeavor(note):
-        return ('\ntype: endeavor' in note)
+    def is_project(note):
+        return ('\ntype: project' in note)
 
     @staticmethod
     def is_active(note):
-         is_active1 = ('\nstate: 💼' in note)
-         is_active2 = ('\nstate: ⌛' in note)
-         return (is_active1 or is_active2)
+         return ('\nstate: 💼' in note)
 
     @staticmethod
-    def is_inactive(note):
-         is_inactive1 = ('\nstate: 🌱' in note)
-         is_inactive2 = ('\nstate: 💤' in note)
-         is_inactive3 = ('\nstate: 🗂️' in note)
-         return (is_inactive1 or is_inactive2 or is_inactive3)
+    def is_dormant(note):
+         is_dormant1 = ('\nstate: 🌱' in note)
+         is_dormant2 = ('\nstate: 💤' in note)
+         is_dormant3 = ('\nstate: 🗂️' in note)
+         return (is_dormant1 or is_dormant2 or is_dormant3)
 
     @staticmethod
-    def assign_note(is_active, is_inactive):
+    def is_life(note):
+         return ('\ndomain: 👨‍👩‍👧‍👧' in note)
 
-        if (is_active is True) and (is_inactive is False):
+    @staticmethod
+    def is_work(note):
+        return ('\ndomain: 💼' in note)
+
+    @staticmethod
+    def assign_status(is_active, is_dormant):
+
+        assert isinstance(is_active, bool)
+        assert isinstance(is_dormant, bool)
+
+        if (is_active is True) and (is_dormant is False):
             return 'active'
-        elif (is_active is False) and (is_inactive is True):
-            return 'inactive'
+        elif (is_active is False) and (is_dormant is True):
+            return 'dormant'
         else:
             return 'undecided'
 
-        assert False
+    @staticmethod
+    def assign_domain(is_life, is_work):
+
+        assert isinstance(is_life, bool)
+        assert isinstance(is_work, bool)
+
+        if (is_life is True) and (is_work is False):
+            return 'life'
+        elif (is_life is False) and (is_work is True):
+            return 'work'
+        else:
+            return 'undecided'
 
     @staticmethod
     def move_file(filepath, destination_dir):
